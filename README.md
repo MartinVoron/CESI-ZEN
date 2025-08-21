@@ -312,6 +312,6 @@ Ce projet est sous licence **MIT** - voir le fichier [LICENSE](LICENSE) pour plu
 
 Made with ❤️ by **CesiZen Team**
 
-test commit
+
 
 </div> 
