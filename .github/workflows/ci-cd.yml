@@ -1,17 +1,27 @@
-name: CI (disabled)
+name: CI-CD
 
-# Disabled: replaced by .github/workflows/simple-ci.yml
 on:
-  workflow_dispatch: {}
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
 
 env:
   NODE_VERSION: '18'
   PYTHON_VERSION: '3.11'
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/${{ github.repository_owner }}/cesizen-backend
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository_owner }}/cesizen-frontend
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     
     services:
       mongodb:
@@ -49,7 +59,7 @@ jobs:
         cd application/backend
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-cov pytest-mock
+        pip install pytest pytest-cov pytest-mock pymongo
 
     - name: Create test environment file
       run: |
@@ -64,12 +74,22 @@ jobs:
         CORS_ORIGINS=http://localhost:3000
         EOF
 
-    - name: Wait for MongoDB
+    - name: Wait for MongoDB (auth ping via PyMongo)
       run: |
-        until mongosh --host localhost:27017 --username admin --password admin123 --authenticationDatabase admin --eval "print(\"MongoDB is ready\")" --quiet; do
-          echo "Waiting for MongoDB..."
-          sleep 2
-        done
+        python - << 'PY'
+        import time, sys
+        from pymongo import MongoClient
+        uri = "mongodb://admin:admin123@localhost:27017/admin?authSource=admin"
+        for i in range(30):
+            try:
+                MongoClient(uri, serverSelectionTimeoutMS=1000).admin.command('ping')
+                print('MongoDB is ready')
+                sys.exit(0)
+            except Exception as e:
+                print('Waiting for MongoDB...', e)
+                time.sleep(2)
+        sys.exit(1)
+        PY
 
     - name: Run backend tests
       run: |
@@ -88,6 +108,7 @@ jobs:
   frontend-test:
     name: Frontend Tests & Lint
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
 
     steps:
     - name: Checkout code
@@ -97,39 +118,31 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
-        cache-dependency-path: application/frontend/package-lock.json
+        cache: 'pnpm'
+        cache-dependency-path: application/frontend/pnpm-lock.yaml
 
-    - name: Install pnpm
-      run: npm install -g pnpm
-
-    - name: Cache pnpm dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.pnpm-store
-        key: ${{ runner.os }}-pnpm-${{ hashFiles('application/frontend/pnpm-lock.yaml') }}
-        restore-keys: |
-          ${{ runner.os }}-pnpm-
+    - name: Enable Corepack (pnpm)
+      run: corepack enable
 
     - name: Install frontend dependencies
       run: |
         cd application/frontend
-        pnpm install --frozen-lockfile || npm install
+        pnpm install --frozen-lockfile
 
     - name: Run ESLint
       run: |
         cd application/frontend
-        pnpm run lint || npm run lint
+        pnpm run lint
 
     - name: Run TypeScript check
       run: |
         cd application/frontend
-        pnpm exec tsc --noEmit || npx tsc --noEmit
+        pnpm exec tsc --noEmit
 
     - name: Run frontend tests
       run: |
         cd application/frontend
-        pnpm run test --coverage || npm run test -- --coverage
+        pnpm run test --coverage
       env:
         CI: true
 
@@ -143,6 +156,7 @@ jobs:
   docker-build:
     name: Docker Build Test
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     
     steps:
     - name: Checkout code
@@ -168,11 +182,12 @@ jobs:
         cp application/frontend/env.local.template application/frontend/.env.local
         
         # Test docker-compose configuration
-        docker-compose -f docker-compose.dev.yml config
+        docker compose -f docker-compose.dev.yml config
 
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     
     steps:
     - name: Checkout code
@@ -190,4 +205,62 @@ jobs:
       uses: github/codeql-action/upload-sarif@v2
       if: always()
       with:
-        sarif_file: 'trivy-results.sarif' 
+        sarif_file: 'trivy-results.sarif'
+
+  build-and-push:
+    name: Build and Push Docker Images
+    needs: [backend-test, frontend-test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract backend metadata
+      id: meta-backend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.IMAGE_BACKEND }}
+        tags: |
+          type=ref,event=branch
+          type=sha
+          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+    - name: Build and push backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./application/backend
+        file: ./application/backend/Dockerfile
+        push: true
+        tags: ${{ steps.meta-backend.outputs.tags }}
+        labels: ${{ steps.meta-backend.outputs.labels }}
+
+    - name: Extract frontend metadata
+      id: meta-frontend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.IMAGE_FRONTEND }}
+        tags: |
+          type=ref,event=branch
+          type=sha
+          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+    - name: Build and push frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./application/frontend
+        file: ./application/frontend/Dockerfile
+        push: true
+        tags: ${{ steps.meta-frontend.outputs.tags }}
+        labels: ${{ steps.meta-frontend.outputs.labels }}
