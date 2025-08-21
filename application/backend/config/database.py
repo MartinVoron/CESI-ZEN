@@ -3,9 +3,20 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
-# Charger les variables d'environnement depuis .env.dev ou config.env
-load_dotenv('.env.dev')  # Development environment
-load_dotenv('config.env')  # Fallback to existing config
+"""Gestion du chargement des variables d'environnement pour MongoDB.
+Priorité:
+1) Variables d'environnement du runner (CI)
+2) Fichier .env.test si FLASK_ENV=testing
+3) Fichier .env.dev (développement)
+4) Fichier config.env (fallback)
+"""
+
+env = os.getenv('FLASK_ENV', 'development').lower()
+if env == 'testing':
+    load_dotenv('.env.test')
+else:
+    load_dotenv('.env.dev')
+load_dotenv('config.env')  # Fallback commun
 
 # Configuration de la connexion MongoDB depuis les variables d'environnement
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/')
