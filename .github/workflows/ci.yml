@@ -1,10 +1,8 @@
-name: CI
+name: CI (disabled)
 
+# Disabled: replaced by .github/workflows/simple-ci.yml
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+  workflow_dispatch: {}
 
 env:
   NODE_VERSION: '18'
