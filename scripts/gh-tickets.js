@@ -46,6 +46,17 @@ function getOctokit() {
 }
 
 async function cmdList(argv) {
+  // Allow positional overrides from npm run/PowerShell where flags may be stripped
+  // Pattern: node gh-tickets.js list [state] [owner/name]
+  const maybeState = argv._ && argv._[1];
+  const maybeRepo = argv._ && argv._[2];
+  if (!argv.state && ["open", "closed", "all"].includes(String(maybeState || ""))) {
+    argv.state = maybeState;
+  }
+  if (!argv.repo && typeof maybeRepo === "string" && /.+\/.+/.test(maybeRepo)) {
+    argv.repo = maybeRepo;
+  }
+
   const { owner, repo } = resolveRepo(argv.repo);
   const octokit = getOctokit();
   const state = argv.state || "open";
