@@ -130,6 +130,9 @@ jobs:
     - name: Enable Corepack (pnpm)
       run: corepack enable
 
+    - name: Install pnpm globally (fallback)
+      run: npm install -g pnpm@9
+
     - name: Setup pnpm
       uses: pnpm/action-setup@v3
       with:
