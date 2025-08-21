@@ -44,8 +44,8 @@ WORKDIR /app
 # Copier les fichiers de dépendances en premier (pour le cache Docker)
 COPY package.json pnpm-lock.yaml ./
 
-# Installer les dépendances
-RUN pnpm install --frozen-lockfile
+# Installer les dépendances (avec force pour corriger le lockfile)
+RUN pnpm install --force
 
 # Copier le code source
 COPY . .
@@ -82,7 +82,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # Installer les dépendances (y compris devDependencies pour le build)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --force
 
 # Copier le code source
 COPY . .

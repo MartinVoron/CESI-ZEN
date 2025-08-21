@@ -3,8 +3,6 @@
 # ==========================================
 # Environment de développement complet avec MongoDB, Backend Flask et Frontend React
 
-version: '3.8'
-
 # ==========================================
 # SERVICES CONFIGURATION
 # ==========================================
@@ -13,28 +11,29 @@ services:
   # ==========================================
   # DATABASE - MONGODB
   # ==========================================
-  mongodb:
-    image: mongo:6.0
-    container_name: cesizen-mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-cesizen-dev-password}
-      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:-CesiZen}
-    volumes:
-      - mongodb_data:/data/db
-      - mongodb_config:/data/configdb
-      - ./scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
-    ports:
-      - "${MONGO_PORT:-27017}:27017"
-    networks:
-      - cesizen-network
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh mongodb://localhost:27017/test --quiet
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+  # MONGODB LOCAL - DÉSACTIVÉ (utilisation de MongoDB Atlas)
+  # mongodb:
+  #   image: mongo:6.0
+  #   container_name: cesizen-mongodb
+  #   restart: unless-stopped
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+  #     MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-cesizen-dev-password}
+  #     MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:-CesiZen}
+  #   volumes:
+  #     - mongodb_data:/data/db
+  #     - mongodb_config:/data/configdb
+  #     - ./scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+  #   ports:
+  #     - "${MONGO_PORT:-27017}:27017"
+  #   networks:
+  #     - cesizen-network
+  #   healthcheck:
+  #     test: echo 'db.runCommand("ping").ok' | mongosh mongodb://localhost:27017/test --quiet
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 20s
 
   # ==========================================
   # BACKEND - FLASK API
@@ -47,8 +46,8 @@ services:
     container_name: cesizen-backend
     restart: unless-stopped
     environment:
-      # Database
-      MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-cesizen-dev-password}@mongodb:27017/${MONGO_DB_NAME:-CesiZen}?authSource=admin
+      # Database - MongoDB Atlas
+      MONGO_URI: ${MONGO_URI:-mongodb+srv://martinvoron:IWKVrumdRMmkZdHS@cluster.btoi0.mongodb.net/}
       DB_NAME: ${MONGO_DB_NAME:-CesiZen}
       
       # Security
@@ -62,6 +61,22 @@ services:
       
       # CORS
       FRONTEND_URL: http://localhost:5173
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      
+      # Performance
+      WORKERS: ${WORKERS:-2}
+      MAX_REQUESTS: ${MAX_REQUESTS:-1000}
+      
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      
+      # Application
+      PORT: 5000
+      
+      # Sécurité
+      DISABLE_RATE_LIMIT: ${DISABLE_RATE_LIMIT:-false}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      SESSION_COOKIE_HTTPONLY: ${SESSION_COOKIE_HTTPONLY:-true}
     volumes:
       - ./application/backend:/app
       - backend_logs:/app/logs
@@ -73,9 +88,9 @@ services:
       - "${BACKEND_PORT:-5000}:5000"
     networks:
       - cesizen-network
-    depends_on:
-      mongodb:
-        condition: service_healthy
+    # depends_on:
+    #   mongodb:
+    #     condition: service_healthy
     healthcheck:
       test: curl -f http://localhost:5000/health || exit 1
       interval: 30s
@@ -168,9 +183,9 @@ services:
       - "${MONGO_EXPRESS_PORT:-8081}:8081"
     networks:
       - cesizen-network
-    depends_on:
-      mongodb:
-        condition: service_healthy
+    # depends_on:
+    #   mongodb:
+    #     condition: service_healthy
     profiles:
       - tools
 
