@@ -79,7 +79,7 @@ jobs:
         PYTHONPATH: .
 
     - name: Upload backend coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         file: ./application/backend/coverage.xml
         flags: backend
@@ -134,7 +134,7 @@ jobs:
         CI: true
 
     - name: Upload frontend coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         file: ./application/frontend/coverage/lcov.info
         flags: frontend
