@@ -194,7 +194,7 @@ jobs:
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     
     steps:
-      - name: 🚀 Échec de déploiement intentionnel
+      - name: 🚀 Déploiement dev
         run: |
           echo "🚀 Deployment would happen here"
           echo "Branch: ${{ github.ref }}"
