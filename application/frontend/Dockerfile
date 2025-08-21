@@ -7,7 +7,7 @@
 # ==========================================
 # BASE STAGE - Node.js environment
 # ==========================================
-FROM node:18-alpine as base
+FROM node:24-alpine as base
 
 # Métadonnées
 LABEL maintainer="CesiZen Team <dev@cesizen.app>"
