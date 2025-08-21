@@ -1,0 +1,195 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  NODE_VERSION: '18'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: admin123
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand(\"ping\").ok' --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('application/backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install Python dependencies
+      run: |
+        cd application/backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-mock
+
+    - name: Create test environment file
+      run: |
+        cd application/backend
+        cat > .env.test << EOF
+        FLASK_ENV=testing
+        FLASK_DEBUG=False
+        MONGO_URI=mongodb://admin:admin123@localhost:27017/cesizen_test_db?authSource=admin
+        DB_NAME=cesizen_test_db
+        JWT_SECRET=test-jwt-secret
+        SECRET_KEY=test-secret-key
+        CORS_ORIGINS=http://localhost:3000
+        EOF
+
+    - name: Wait for MongoDB
+      run: |
+        until mongosh --host localhost:27017 --username admin --password admin123 --authenticationDatabase admin --eval "print(\"MongoDB is ready\")" --quiet; do
+          echo "Waiting for MongoDB..."
+          sleep 2
+        done
+
+    - name: Run backend tests
+      run: |
+        cd application/backend
+        python -m pytest --cov=. --cov-report=xml --cov-report=term-missing -v
+      env:
+        PYTHONPATH: .
+
+    - name: Upload backend coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./application/backend/coverage.xml
+        flags: backend
+        name: backend-coverage
+
+  frontend-test:
+    name: Frontend Tests & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: application/frontend/package-lock.json
+
+    - name: Install pnpm
+      run: npm install -g pnpm
+
+    - name: Cache pnpm dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('application/frontend/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
+
+    - name: Install frontend dependencies
+      run: |
+        cd application/frontend
+        pnpm install --frozen-lockfile || npm install
+
+    - name: Run ESLint
+      run: |
+        cd application/frontend
+        pnpm run lint || npm run lint
+
+    - name: Run TypeScript check
+      run: |
+        cd application/frontend
+        pnpm exec tsc --noEmit || npx tsc --noEmit
+
+    - name: Run frontend tests
+      run: |
+        cd application/frontend
+        pnpm run test --coverage || npm run test -- --coverage
+      env:
+        CI: true
+
+    - name: Upload frontend coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./application/frontend/coverage/lcov.info
+        flags: frontend
+        name: frontend-coverage
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build backend Docker image
+      run: |
+        cd application/backend
+        docker build -f Dockerfile.dev -t cesizen-backend-dev .
+
+    - name: Build frontend Docker image
+      run: |
+        cd application/frontend
+        docker build -f Dockerfile.dev -t cesizen-frontend-dev .
+
+    - name: Test Docker Compose
+      run: |
+        # Create temporary env files for testing
+        cp application/backend/env.dev.template application/backend/.env.dev
+        cp application/frontend/env.local.template application/frontend/.env.local
+        
+        # Test docker-compose configuration
+        docker-compose -f docker-compose.dev.yml config
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif' 

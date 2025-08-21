@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User, LoginCredentials, RegisterData, AuthState } from '../types/auth'
 
-const API_BASE_URL = 'http://localhost:5001'
+const API_BASE_URL = '/api'
 
 interface AuthStore extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>

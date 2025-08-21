@@ -101,7 +101,7 @@ const AdminDashboard: React.FC = () => {
   const fetchExercises = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5001/exercices')
+      const response = await fetch('/api/exercices')
       if (response.ok) {
         const data = await response.json()
         setExercises(data)
@@ -118,7 +118,7 @@ const AdminDashboard: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5001/users', {
+      const response = await fetch('/api/users', {
         credentials: 'include'
       })
       if (response.ok) {
@@ -137,7 +137,7 @@ const AdminDashboard: React.FC = () => {
   const fetchContenus = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:5001/informations-sante/', {
+      const response = await fetch('/api/informations-sante/', {
         credentials: 'include'
       })
       if (response.ok) {
@@ -160,7 +160,7 @@ const AdminDashboard: React.FC = () => {
     setSuccess(null)
 
     try {
-      const response = await fetch('http://localhost:5001/exercices', {
+      const response = await fetch('/api/exercices', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -194,7 +194,7 @@ const AdminDashboard: React.FC = () => {
     setSuccess(null)
 
     try {
-      const response = await fetch(`http://localhost:5001/exercices/${editingExercise.id}`, {
+      const response = await fetch(`/api/exercices/${editingExercise.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -252,7 +252,7 @@ const AdminDashboard: React.FC = () => {
     setSuccess(null)
 
     try {
-      const response = await fetch('http://localhost:5001/users', {
+      const response = await fetch('/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -287,7 +287,7 @@ const AdminDashboard: React.FC = () => {
     setSuccess(null)
 
     try {
-      const response = await fetch(`http://localhost:5001/users/${userId}`, {
+      const response = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
         credentials: 'include'
       })
@@ -342,7 +342,7 @@ const AdminDashboard: React.FC = () => {
     setSuccess(null)
 
     try {
-      const response = await fetch('http://localhost:5001/informations-sante/', {
+      const response = await fetch('/api/informations-sante/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -376,7 +376,7 @@ const AdminDashboard: React.FC = () => {
     setSuccess(null)
 
     try {
-      const response = await fetch(`http://localhost:5001/informations-sante/${editingContenu.id}`, {
+      const response = await fetch(`/api/informations-sante/${editingContenu.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -411,7 +411,7 @@ const AdminDashboard: React.FC = () => {
     setSuccess(null)
 
     try {
-      const response = await fetch(`http://localhost:5001/informations-sante/${contenuId}`, {
+      const response = await fetch(`/api/informations-sante/${contenuId}`, {
         method: 'DELETE',
         credentials: 'include'
       })

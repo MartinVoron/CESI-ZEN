@@ -99,28 +99,70 @@ CesiZen/
 - **PWA** : Vite Plugin PWA
 
 **DevOps & Outils**
-- **Tests** : Vitest, Jest
+- **Conteneurisation** : Docker & Docker Compose
+- **Tests** : Vitest (frontend), pytest (backend)
 - **Linting** : ESLint, Prettier
 - **CI/CD** : GitHub Actions
 - **Package Manager** : pnpm (frontend), pip (backend)
+- **Monitoring** : Health checks intégrés
+- **Sécurité** : Dependabot, Trivy scanner
 
 ## 🚀 Installation rapide
 
-### Prérequis
+### 🐳 Option 1: Docker (Recommandé pour le développement)
 
-- **Python** 3.8+ 
+#### Prérequis
+- **Docker** & **Docker Compose** installés
+- **Git** pour cloner le repository
+
+#### Installation en une commande
+```bash
+# Cloner le repository
+git clone https://github.com/votre-username/CesiZen.git
+cd CesiZen
+
+# Copier les fichiers d'environnement
+cp application/backend/env.dev.template application/backend/.env.dev
+cp application/frontend/env.local.template application/frontend/.env.local
+
+# Lancer la stack complète
+docker compose -f docker-compose.dev.yml up --build
+```
+
+#### Accès aux services
+- **Frontend** : http://localhost:5173
+- **Backend API** : http://localhost:5000
+- **MongoDB** : http://localhost:27017
+- **Mongo Express** : http://localhost:8081
+
+#### Vérification santé
+```bash
+# Test du backend
+curl http://localhost:5000/health
+
+# Test du frontend
+curl http://localhost:5173
+
+# Test de l'API via le proxy frontend
+curl http://localhost:5173/api/health
+```
+
+### 🔧 Option 2: Installation locale
+
+#### Prérequis
+- **Python** 3.11+ 
 - **Node.js** 18+ 
 - **MongoDB** 4.4+ (local ou Atlas)
 - **pnpm** (recommandé) ou npm
 
-### 1️⃣ Cloner le repository
+#### 1️⃣ Cloner le repository
 
 ```bash
 git clone https://github.com/votre-username/CesiZen.git
 cd CesiZen
 ```
 
-### 2️⃣ Configuration Backend
+#### 2️⃣ Configuration Backend
 
 ```bash
 cd application/backend
@@ -135,8 +177,8 @@ venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 
 # Configuration
-cp backend.env.example config.env
-# Éditer config.env avec vos valeurs
+cp env.dev.template .env.dev
+# Éditer .env.dev avec vos valeurs MongoDB locales
 
 # Initialiser la base de données
 python init_data.py
@@ -146,7 +188,7 @@ python init_informations_sante.py
 python main.py
 ```
 
-### 3️⃣ Configuration Frontend
+#### 3️⃣ Configuration Frontend
 
 ```bash
 cd application/frontend
@@ -155,18 +197,40 @@ cd application/frontend
 pnpm install
 
 # Configuration
-cp frontend.env.example .env.local
+cp env.local.template .env.local
 # Éditer .env.local avec vos valeurs
 
 # Lancer en développement
 pnpm dev
 ```
 
-### 4️⃣ Accès à l'application
+#### 4️⃣ Accès à l'application
 
 - **Frontend** : http://localhost:5173
 - **Backend API** : http://localhost:5000
-- **Documentation API** : http://localhost:5000/docs (à venir)
+- **Health Check** : http://localhost:5000/health
+
+### 🔧 Dépannage
+
+#### Docker
+```bash
+# Voir les logs des services
+docker compose -f docker-compose.dev.yml logs backend
+docker compose -f docker-compose.dev.yml logs frontend
+
+# Rebuild complet
+docker compose -f docker-compose.dev.yml down -v
+docker compose -f docker-compose.dev.yml up --build
+
+# Vérifier l'état des services
+docker compose -f docker-compose.dev.yml ps
+```
+
+#### Problèmes courants
+- **Port déjà utilisé** : Modifier les ports dans `docker-compose.dev.yml`
+- **Erreur MongoDB** : Vérifier que Docker dispose d'assez de mémoire (>2GB)
+- **Hot-reload ne fonctionne pas** : Vérifier les volumes dans docker-compose
+- **CORS errors** : Vérifier la configuration `CORS_ORIGINS` dans `.env.dev`
 
 ## 📖 Documentation détaillée
 

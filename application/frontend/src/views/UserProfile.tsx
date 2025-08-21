@@ -45,7 +45,7 @@ const UserProfile: React.FC = () => {
     setSuccess(null)
 
     try {
-      const response = await fetch('http://localhost:5001/users/profile', {
+      const response = await fetch('/api/users/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

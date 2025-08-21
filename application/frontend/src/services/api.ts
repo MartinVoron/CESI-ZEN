@@ -17,7 +17,7 @@ import type {
 
 class ApiService {
   private api: AxiosInstance;
-  private baseURL = 'http://localhost:5000';
+  private baseURL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? '/api' : 'http://localhost:5000');
 
   constructor() {
     this.api = axios.create({

@@ -47,11 +47,11 @@ services:
     restart: unless-stopped
     environment:
       # Database - MongoDB Atlas
-      MONGO_URI: ${MONGO_URI:-mongodb+srv://martinvoron:IWKVrumdRMmkZdHS@cluster.btoi0.mongodb.net/}
+      MONGO_URI: ${MONGO_URI:?MONGO_URI not set}
       DB_NAME: ${MONGO_DB_NAME:-CesiZen}
       
       # Security
-      SECRET_KEY: ${SECRET_KEY:-cesizen-dev-secret-key-change-in-production}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY not set}
       JWT_EXPIRATION_DELTA: ${JWT_EXPIRATION_DELTA:-86400}
       
       # Flask
@@ -120,7 +120,7 @@ services:
     restart: unless-stopped
     environment:
       # Vite configuration
-      VITE_API_BASE_URL: http://localhost:5000
+      VITE_API_BASE_URL: /api
       VITE_APP_NAME: CesiZen
       VITE_APP_VERSION: 1.0.0
       VITE_NODE_ENV: development
@@ -172,12 +172,12 @@ services:
     container_name: cesizen-mongo-express
     restart: unless-stopped
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USERNAME:-admin}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-cesizen-dev-password}
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USERNAME:-}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-}
       ME_CONFIG_MONGODB_SERVER: mongodb
       ME_CONFIG_MONGODB_PORT: 27017
-      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USER:-admin}
-      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-cesizen-admin}
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USER:-}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-}
       ME_CONFIG_SITE_BASEURL: /mongo-express/
     ports:
       - "${MONGO_EXPRESS_PORT:-8081}:8081"
@@ -194,7 +194,7 @@ services:
     image: redis:7-alpine
     container_name: cesizen-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-cesizen-redis-password}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis}
     volumes:
       - redis_data:/data
     ports:
@@ -202,7 +202,7 @@ services:
     networks:
       - cesizen-network
     healthcheck:
-      test: redis-cli --no-auth-warning -a ${REDIS_PASSWORD:-cesizen-redis-password} ping
+      test: redis-cli --no-auth-warning -a ${REDIS_PASSWORD:-redis} ping
       interval: 30s
       timeout: 10s
       retries: 3

@@ -6,6 +6,14 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   server: {
     port: 5173,
+    host: '0.0.0.0',
+    proxy: {
+      '/api': {
+        target: 'http://backend:5000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   },
   plugins: [
     react(),

@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: cesizen-mongo-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME not set}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD not set}
+      MONGO_INITDB_DATABASE: ${MONGO_DB_NAME:-cesizen_db}
+
+    volumes:
+      - mongo_data_dev:/data/db
+      - ./scripts/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - cesizen-network
+
+  mongo-express:
+
+    image: mongo-express:1.0.2
+    container_name: cesizen-mongo-express-dev
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME not set}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD not set}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME not set}:${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD not set}@mongo:27017/
+      ME_CONFIG_BASICAUTH: false
+
+    depends_on:
+      - mongo
+    networks:
+      - cesizen-network
+
+  backend:
+
+    build:
+      context: ./application/backend
+      dockerfile: Dockerfile.dev
+    container_name: cesizen-backend-dev
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=True
+      - MONGO_URI=${MONGO_URI:?MONGO_URI not set}
+      - DB_NAME=${MONGO_DB_NAME:-cesizen_db}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET not set}
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY not set}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://frontend:5173}
+      - PORT=5000
+
+    volumes:
+      - ./application/backend:/app
+      - /app/__pycache__
+      - backend_logs_dev:/app/logs
+    depends_on:
+      - mongo
+    networks:
+      - cesizen-network
+    env_file:
+      - ./application/backend/.env.dev
+
+  frontend:
+
+    build:
+      context: ./application/frontend
+      dockerfile: Dockerfile.dev
+    container_name: cesizen-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=/api
+
+    volumes:
+      - ./application/frontend:/app
+      - /app/node_modules
+      - /app/dev-dist
+    depends_on:
+      - backend
+    networks:
+      - cesizen-network
+    env_file:
+      - ./application/frontend/.env.local
+
+volumes:
+  mongo_data_dev:
+    driver: local
+  backend_logs_dev:
+    driver: local
+
+networks:
+  cesizen-network:
+    driver: bridge 

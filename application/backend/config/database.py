@@ -3,14 +3,30 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
-# Charger les variables d'environnement depuis config.env
-load_dotenv('config.env')
+# Charger les variables d'environnement depuis .env.dev ou config.env
+load_dotenv('.env.dev')  # Development environment
+load_dotenv('config.env')  # Fallback to existing config
 
 # Configuration de la connexion MongoDB depuis les variables d'environnement
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/')
 DB_NAME = os.getenv('DB_NAME', 'cesizen_db')
 
-print(f"Connecting to MongoDB with URI: {MONGO_URI}")
+def _mask_mongo_uri(uri: str) -> str:
+    """Masque les identifiants dans une URI MongoDB pour éviter les fuites de secrets."""
+    try:
+        # Exemple: mongodb://user:pass@host:port/db?opts
+        if '://' in uri and '@' in uri:
+            scheme, rest = uri.split('://', 1)
+            creds_and_host = rest.split('@', 1)
+            # Remplacer les credentials par ***
+            masked_rest = f"***:***@{creds_and_host[1]}"
+            return f"{scheme}://{masked_rest}"
+        return uri
+    except Exception:
+        return uri
+
+masked_uri = _mask_mongo_uri(MONGO_URI)
+print(f"Connecting to MongoDB with URI: {masked_uri}")
 print(f"Using database name: {DB_NAME}")
 
 def get_db():

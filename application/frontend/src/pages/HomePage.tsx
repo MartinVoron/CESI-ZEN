@@ -53,7 +53,7 @@ export default function HomePage() {
         setLoading(true)
         setError(null)
         
-        const response = await fetch('http://localhost:5001/exercices')
+        const response = await fetch('/api/exercices')
 
         if (response.ok) {
           const exercisesData = await response.json()
@@ -121,7 +121,7 @@ export default function HomePage() {
         setHealthLoading(true)
         setHealthError(null)
         
-        const response = await fetch('http://localhost:5001/informations-sante/')
+        const response = await fetch('/api/informations-sante/')
 
         if (response.ok) {
           const contenusData = await response.json()

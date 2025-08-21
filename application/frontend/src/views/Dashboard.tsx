@@ -43,7 +43,7 @@ export default function Dashboard() {
         setLoading(true)
         setError(null)
         
-        const response = await fetch('http://localhost:5001/exercices', {
+        const response = await fetch('/api/exercices', {
           credentials: 'include'
         })
 
