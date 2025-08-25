@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "@octokit/rest": "^20.1.1",
-    "yargs": "^17.7.2"
+    "yargs": "^18.0.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",
